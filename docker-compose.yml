@@ -1,0 +1,19 @@
+version: "3"
+services:
+  db:
+    container_name: db
+    image: mysql:8.2.0
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: 'password'
+    restart: always
+  app:
+    container_name: app
+    links:
+      - "db"
+    build: ./
+    ports:
+      - "5001:5000"
+    depends_on:
+      - db
