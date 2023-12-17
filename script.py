@@ -1,7 +1,17 @@
+import time
+
 import requests
+import os
 from bs4 import BeautifulSoup
 import mysql.connector
-from mysql.connector import errorcode
+from mysql.connector import Error
+
+
+# Assuming user has environment variables set locally
+host = "database"
+user = "root"
+password = "root"
+port = 3306
 
 
 def scrape(url):
@@ -51,43 +61,100 @@ def parse_html(html):
     return packs
 
 
-def create_table(cursor):
+def create_table(connection):
     create_table_query = '''CREATE TABLE IF NOT EXISTS packs (
-        pack_id INTEGER PRIMARY KEY,
-        pack_name VARCHAR(64),
-        coin_value INT(8),
-        fcp_value INT(8),
-        item_count INT(4),
-        rare_item_count INT(4),
-        player_count INT(4)
-    )
-    '''
-
-    cursor.execute(create_table_query)
-
-def create_database(cursor):
-    try:
-        cursor.execute(
-            "CREATE DATABASE packs DEFAULT CHARACTER SET 'utf8'"
+            pack_id INTEGER PRIMARY KEY,
+            pack_name VARCHAR(64),
+            coin_value INT(8),
+            fcp_value INT(8),
+            item_count INT(4),
+            rare_item_count INT(4),
+            player_count INT(4)
         )
-    except mysql.connector.Error as err:
-        print(err, '\nContinuing...')
+        '''
+
+    if connection is not None:
+        with connection.cursor() as cursor:
+            try:
+                cursor.execute("USE futmind_parser")
+                print("Using Database: futmind_parser")
+                cursor.execute("DROP TABLE IF EXISTS packs")
+                print("Dropped existing table: packs")
+                cursor.execute(create_table_query)
+            except Error as e:
+                print(f"Create Table Error: {e}")
+    else:
+        print("create_table: Failed to connect")
+
+    connection.commit()
+    print("Table Created")
+
+def create_database(connection):
+    if connection is not None:
+        with connection.cursor() as cursor:
+            try:
+                cursor.execute("DROP DATABASE IF EXISTS futmind_parser")
+                print("Existing Database Dropped")
+                cursor.execute(
+                    "CREATE DATABASE futmind_parser DEFAULT CHARACTER SET 'utf8'"
+                )
+                print("Database Created")
+                cursor.execute("USE futmind_parser")
+                connection.commit()
+            except Error as e:
+                print(f"Create Database Error: {e}")
+    else:
+        print("create_database: Failed to connect")
 
 
-def insert_rows(cursor, pack_list):
-    try:
-        cursor.execute('USE packs')
-    except mysql.connector.Error as err:
-        print('Database does not exist. Creating...')
-        create_database(cursor)
-    create_table(cursor)
+
+def insert_rows(connection, pack_list):
+        with connection.cursor() as cursor:
+            try:
+                cursor.execute("USE futmind_parser")
+                cursor.executemany(
+                    """INSERT INTO packs
+                    VALUES 
+                    (%s, %s, %s, %s, %s, %s, %s)""", pack_list
+                )
+                connection.commit()
+                print("Inserted Rows: ", pack_list)
+            except Error as e:
+                print(f"Insert Rows Error: {e}")
+
+def create_connection():
+    connected = False
+    attempts = 0
+
+    while not connected and attempts < 5:
+        try:
+            connection = mysql.connector.connect(
+                host="db",
+                port="3306",
+                user="root",
+                password="password"
+            )
+            if connection.is_connected():
+                print("Connected to MySQL")
+                connected = True
+                return connection
+        except Error as e:
+            print(f"Error: {e}")
+            attempts += 1
+            print("Attempting to reconnect to MySQL")
+            time.sleep(5)
+
+    return None
+
 
 
 
 
 html = scrape("https://futmind.com/eafc-24-packs-ultimate-team")
 pack_list = parse_html(html)
-cnx = mysql.connector.connect(user='root', password='root', host='localhost')
-cursor = cnx.cursor()
-insert_rows(cursor, pack_list)
+connection = create_connection()
+create_database(connection)
+create_table(connection)
+insert_rows(connection, pack_list)
+
 
