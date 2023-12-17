@@ -24,7 +24,7 @@ def parse_html(html):
     for row in rows:
         pack = []
 
-        ## First element in each row contains pack ID and name
+        # First element in each row contains pack ID and name
 
         header = row.find('td', attrs={'class': 'whitespace-nowrap'}).find('a')
 
@@ -37,7 +37,7 @@ def parse_html(html):
         cols = row.find_all('td')[1:]
 
         for i in range(6):
-            ## 5th column is quicksell value, don't need
+            # 5th column is quick sell value, don't need
             if i == 4:
                 continue
             attribute = cols[i].get_text()
