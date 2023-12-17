@@ -7,13 +7,6 @@ import mysql.connector
 from mysql.connector import Error
 
 
-# Assuming user has environment variables set locally
-host = "database"
-user = "root"
-password = "root"
-port = 3306
-
-
 def scrape(url):
     page = requests.get(url)
     return BeautifulSoup(page.content, 'html.parser')
@@ -89,6 +82,7 @@ def create_table(connection):
     connection.commit()
     print("Table Created")
 
+
 def create_database(connection):
     if connection is not None:
         with connection.cursor() as cursor:
@@ -107,20 +101,20 @@ def create_database(connection):
         print("create_database: Failed to connect")
 
 
-
 def insert_rows(connection, pack_list):
-        with connection.cursor() as cursor:
-            try:
-                cursor.execute("USE futmind_parser")
-                cursor.executemany(
-                    """INSERT INTO packs
+    with connection.cursor() as cursor:
+        try:
+            cursor.execute("USE futmind_parser")
+            cursor.executemany(
+                """INSERT INTO packs
                     VALUES 
                     (%s, %s, %s, %s, %s, %s, %s)""", pack_list
-                )
-                connection.commit()
-                print("Inserted Rows: ", pack_list)
-            except Error as e:
-                print(f"Insert Rows Error: {e}")
+            )
+            connection.commit()
+            print("Inserted Rows: ", pack_list)
+        except Error as e:
+            print(f"Insert Rows Error: {e}")
+
 
 def create_connection():
     connected = False
@@ -147,14 +141,9 @@ def create_connection():
     return None
 
 
-
-
-
 html = scrape("https://futmind.com/eafc-24-packs-ultimate-team")
 pack_list = parse_html(html)
 connection = create_connection()
 create_database(connection)
 create_table(connection)
 insert_rows(connection, pack_list)
-
-
